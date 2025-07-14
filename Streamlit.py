@@ -1,14 +1,17 @@
 # Streamlit App: Upload Master Excel, Clean, and Insert into PostgreSQL
 import streamlit as st
 import pandas as pd
-import psycopg2
 from datetime import datetime
 
-st.set_page_config(page_title="Master Sheet ETL", layout="wide")
-st.title("Production ETL – Upload and Cleaning")
+# Uncomment when PostgreSQL is ready
+# import psycopg2
 
-# PostgreSQL Connection (update with your actual credentials)
+st.set_page_config(page_title="Master Sheet ETL", layout="wide")
+st.title("📊 Production ETL – Upload and Cleaning")
+
+# ✅ PostgreSQL connection (use when database is ready)
 def get_connection():
+    import psycopg2
     return psycopg2.connect(
         host="your_host",
         port="5432",
@@ -17,7 +20,7 @@ def get_connection():
         password="your_password"
     )
 
-# Function to enrich the date with Dim_Date fields
+# Function to enrich the date column
 def enrich_date_fields(df, date_col):
     df[date_col] = pd.to_datetime(df[date_col], errors='coerce', dayfirst=True)
     df['day'] = df[date_col].dt.day
@@ -28,14 +31,13 @@ def enrich_date_fields(df, date_col):
     df['quarter'] = df[date_col].dt.quarter
     return df
 
-uploaded_file = st.file_uploader("Upload the Master Sheet Excel file", type=["xlsx"])
+uploaded_file = st.file_uploader("📤 Upload the Master Sheet Excel file", type=["xlsx"])
 
 if uploaded_file:
     try:
         sheets = pd.read_excel(uploaded_file, sheet_name=None)
-        st.success("File uploaded successfully")
+        st.success("✅ File uploaded successfully")
 
-        # Basic cleaning for each sheet if it exists
         cleaned_data = {}
         required_sheets = ["Intake", "Sorting", "Low-Risk", "High-Care", "Assembly", "Dispatch"]
 
@@ -52,29 +54,38 @@ if uploaded_file:
                 st.subheader(f"📄 {sheet}")
                 st.dataframe(df.head())
             else:
-                st.warning(f"The sheet '{sheet}' was not found in the Excel file.")
+                st.warning(f"⚠️ Sheet '{sheet}' not found in the file.")
 
-        # Confirm upload to PostgreSQL
-        if st.button("Upload all to the Data Warehouse (PostgreSQL)"):
-            conn = get_connection()
-            cursor = conn.cursor()
+        # Upload toggle
+        upload_enabled = st.checkbox("✅ Enable PostgreSQL Upload", value=False)
 
-            for sheet_name, df in cleaned_data.items():
-                table_name = "cleaned_" + sheet_name.lower().replace(" ", "_")
-                st.write(f"Uploading sheet: {sheet_name} → Table: {table_name}")
-                # Create table if not exists and upload data
-                df.head(0).to_sql(table_name, con=conn, if_exists='append', index=False, method='multi')
-                for i, row in df.iterrows():
-                    values = tuple(row.values)
-                    placeholders = ','.join(['%s'] * len(values))
-                    columns = ','.join(df.columns)
-                    sql = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
-                    cursor.execute(sql, values)
+        if st.button("🚀 Upload to PostgreSQL Data Warehouse") and upload_enabled:
+            try:
+                conn = get_connection()
+                cursor = conn.cursor()
 
-            conn.commit()
-            cursor.close()
-            conn.close()
-            st.success("Data successfully uploaded to the warehouse!")
+                for sheet_name, df in cleaned_data.items():
+                    table_name = "cleaned_" + sheet_name.lower().replace(" ", "_")
+                    st.write(f"📦 Uploading: {sheet_name} → Table: {table_name}")
+
+                    # Create INSERT statement for each row
+                    for i, row in df.iterrows():
+                        values = tuple(row.values)
+                        placeholders = ','.join(['%s'] * len(values))
+                        columns = ','.join(df.columns)
+                        sql = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
+                        cursor.execute(sql, values)
+
+                conn.commit()
+                cursor.close()
+                conn.close()
+                st.success("✅ Data successfully uploaded to PostgreSQL!")
+
+            except Exception as db_err:
+                st.error(f"❌ PostgreSQL Error: {str(db_err)}")
+
+        elif not upload_enabled:
+            st.info("ℹ️ PostgreSQL upload is disabled. You can review the data above.")
 
     except Exception as e:
-        st.error(f"Error processing the file: {str(e)}")
+        st.error(f"❌ Error processing the file: {str(e)}")
