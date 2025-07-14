@@ -7,9 +7,9 @@ from datetime import datetime
 # import psycopg2
 
 st.set_page_config(page_title="Master Sheet ETL", layout="wide")
-st.title("📊 Production ETL – Upload and Cleaning")
+st.title("Production ETL – Upload and Cleaning")
 
-# ✅ PostgreSQL connection (use when database is ready)
+# PostgreSQL connection (use when database is ready)
 def get_connection():
     import psycopg2
     return psycopg2.connect(
@@ -36,37 +36,42 @@ uploaded_file = st.file_uploader("📤 Upload the Master Sheet Excel file", type
 if uploaded_file:
     try:
         sheets = pd.read_excel(uploaded_file, sheet_name=None)
-        st.success("✅ File uploaded successfully")
+        st.success("File uploaded successfully")
 
         cleaned_data = {}
-        required_sheets = ["Intake", "Sorting", "Low-Risk", "High-Care", "Assembly", "Dispatch"]
+        required_sheets = ["Intake", "Sorting", "Low-Risk", "High-Care", "Assembly", "Dispatch", "Order List"]
 
         for sheet in required_sheets:
             if sheet in sheets:
                 df = sheets[sheet].copy()
+                # Identify the correct date column
                 if 'Date' in df.columns:
                     df = enrich_date_fields(df, 'Date')
                 elif 'Entry_Date' in df.columns:
                     df = enrich_date_fields(df, 'Entry_Date')
                 elif 'Departure_Date_ID' in df.columns:
                     df = enrich_date_fields(df, 'Departure_Date_ID')
+                elif 'Order Date' in df.columns:
+                    df = enrich_date_fields(df, 'Order Date')
+                elif 'Completed on Dep. Date' in df.columns:
+                    df = enrich_date_fields(df, 'Completed on Dep. Date')
                 cleaned_data[sheet] = df
                 st.subheader(f"📄 {sheet}")
                 st.dataframe(df.head())
             else:
-                st.warning(f"⚠️ Sheet '{sheet}' not found in the file.")
+                st.warning(f"Sheet '{sheet}' not found in the file.")
 
         # Upload toggle
-        upload_enabled = st.checkbox("✅ Enable PostgreSQL Upload", value=False)
+        upload_enabled = st.checkbox("Enable PostgreSQL Upload", value=False)
 
-        if st.button("🚀 Upload to PostgreSQL Data Warehouse") and upload_enabled:
+        if st.button("Upload to PostgreSQL Data Warehouse") and upload_enabled:
             try:
                 conn = get_connection()
                 cursor = conn.cursor()
 
                 for sheet_name, df in cleaned_data.items():
                     table_name = "cleaned_" + sheet_name.lower().replace(" ", "_")
-                    st.write(f"📦 Uploading: {sheet_name} → Table: {table_name}")
+                    st.write(f" Uploading: {sheet_name} → Table: {table_name}")
 
                     # Create INSERT statement for each row
                     for i, row in df.iterrows():
@@ -79,7 +84,7 @@ if uploaded_file:
                 conn.commit()
                 cursor.close()
                 conn.close()
-                st.success("✅ Data successfully uploaded to PostgreSQL!")
+                st.success("Data successfully uploaded to PostgreSQL!")
 
             except Exception as db_err:
                 st.error(f"❌ PostgreSQL Error: {str(db_err)}")
