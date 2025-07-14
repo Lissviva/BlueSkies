@@ -1,4 +1,4 @@
 streamlit
 pandas
-psycopg2
-datetime
+openpyxl
+psycopg2-binary
