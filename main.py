@@ -39,7 +39,7 @@ if uploaded_file:
         st.success("File uploaded successfully")
 
         cleaned_data = {}
-        required_sheets = ["Intake", "Sorting", "Low-Risk", "High-Care", "Assembly", "Dispatch", "Order List"]
+        required_sheets = ["Intake", "Sorting", "Low-Risk", "High-Care", "Assembly", "Dispatch", "Order-list"]
 
         for sheet in required_sheets:
             if sheet in sheets:
