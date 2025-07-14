@@ -31,7 +31,7 @@ def enrich_date_fields(df, date_col):
     df['quarter'] = df[date_col].dt.quarter
     return df
 
-uploaded_file = st.file_uploader(" Upload the Master Sheet Excel file", type=["xlsx"])
+uploaded_file = st.file_uploader("Upload the Master Sheet Excel file", type=["xlsx"])
 
 if uploaded_file:
     try:
