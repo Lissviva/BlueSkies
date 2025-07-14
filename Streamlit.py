@@ -37,7 +37,7 @@ if uploaded_file:
 
         # Basic cleaning for each sheet if it exists
         cleaned_data = {}
-        required_sheets = ["Intake", "Sorting", "Low-Risk", "High Care", "Assembly", "Dispatch"]
+        required_sheets = ["Intake", "Sorting", "Low-Risk", "High-Care", "Assembly", "Dispatch"]
 
         for sheet in required_sheets:
             if sheet in sheets:
